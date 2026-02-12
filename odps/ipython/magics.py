@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import logging
+import re
 import time
 
 from .. import ODPS, options
@@ -155,7 +156,29 @@ else:
         def execute(self, line, cell=""):
             self._set_odps()
 
-            content = line + "\n" + cell
+            # Parse output variable
+            output_var = None
+            sql_keywords = {
+                "SELECT", "WITH", "INSERT", "CREATE", "DROP", "ALTER", "UPDATE",
+                "DELETE", "GRANT", "REVOKE", "TRUNCATE", "MERGE", "DESC",
+                "DESCRIBE", "SHOW", "USE", "SET", "READ", "ANALYZE", "COMPUTE",
+                "ADD", "REMOVE", "EXPLAIN", "COST", "WHO", "JAR", "FROUNT",
+                "MSCK", "RELOAD", "DFS"
+            }
+
+            line_stripped = line.strip()
+            if line_stripped:
+                parts = line_stripped.split(None, 1)
+                first_word = parts[0]
+                if re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", first_word) and first_word.upper() not in sql_keywords:
+                    output_var = first_word
+                    remainder = parts[1] if len(parts) > 1 else ""
+                    content = remainder + "\n" + cell
+                else:
+                    content = line + "\n" + cell
+            else:
+                content = cell
+            
             content = content.strip()
 
             sql = None
@@ -278,6 +301,8 @@ else:
                                     res = reader.raw
 
                     html_notify("SQL execution succeeded")
+                    if output_var:
+                        self.shell.user_ns[output_var] = res
                     return res
                 finally:
                     progress_ui.close()
