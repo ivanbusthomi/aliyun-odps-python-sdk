@@ -215,6 +215,9 @@ else:
                         instance.id,
                         instance.get_logview_address(),
                     )
+                if output_var:
+                    print("Instance ID: %s" % instance.id)
+                    print("Log view: %s" % instance.get_logview_address())
                 reload_instance_status(self._odps, group_id, instance.id)
                 progress_ui.status("Executing")
 
@@ -303,6 +306,7 @@ else:
                     html_notify("SQL execution succeeded")
                     if output_var:
                         self.shell.user_ns[output_var] = res
+                        return
                     return res
                 finally:
                     progress_ui.close()
